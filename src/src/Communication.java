@@ -21,7 +21,7 @@ public class Communication {
             e.printStackTrace();
         }
 
-        System.out.println("✓ Puerto COM" + commPort + " (" + sp.getDescriptivePortName() + ") abierto correctamente");
+        System.out.println("Puerto COM" + commPort + " (" + sp.getDescriptivePortName() + ") abierto correctamente");
     }
 
     public String read() {
@@ -60,9 +60,9 @@ public class Communication {
             sp.flushIOBuffers();  // CRÍTICO: Forzar envío
 
             if (written == bytesToSend.length) {
-                System.out.println("✓ Comando enviado correctamente");
+                System.out.println("Comando enviado correctamente");
             } else {
-                System.err.println("⚠ Solo se escribieron " + written + " de " + bytesToSend.length + " bytes");
+                System.err.println("Solo se escribieron " + written + " de " + bytesToSend.length + " bytes");
             }
 
             Thread.sleep(50);  // Pequeño delay para que el ESP32 procese
@@ -102,9 +102,9 @@ public class Communication {
             sp.flushIOBuffers();  // Asegurar que todo se envíe
 
             if (totalSent == data.length) {
-                System.out.println("✓ Todos los bytes enviados correctamente (" + totalSent + " bytes)");
+                System.out.println("Todos los bytes enviados correctamente (" + totalSent + " bytes)");
             } else {
-                System.err.println("⚠ Advertencia: Solo se escribieron " + totalSent + " de " + data.length + " bytes");
+                System.err.println("Advertencia: Solo se escribieron " + totalSent + " de " + data.length + " bytes");
             }
 
             Thread.sleep(200);  // Dar tiempo al ESP32 para procesar
