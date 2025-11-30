@@ -31,7 +31,7 @@ public class macroInterfaz extends Application {
     private Communication esp32;
     private HashMap<String, MacroBoton> botones = new HashMap<>();
     private MacroBoton botonSeleccionado = null;
-    private static final String CONFIG_FILE = "macro_config.dat";
+    private static final String CONFIG_FILE = "C:\\Users\\sgsg_\\IdeaProjects\\stremDeck\\macro_config.dat";
     private ComboBox<String> menuMacros;
     private ImageView previewImagen;
     private Label labelBotonSeleccionado;
@@ -111,7 +111,17 @@ public class macroInterfaz extends Application {
         previewImagen.setPreserveRatio(true);
         previewImagen.setVisible(false);
 
+        // REEMPLAZA COMPLETAMENTE el setOnAction del botón cargarImagenBtn
+
         cargarImagenBtn.setOnAction(e -> {
+            // VALIDAR que haya un botón seleccionado
+            if (botonSeleccionado == null) {
+                System.err.println("❌ Error: Debes seleccionar un botón primero");
+                return;
+            }
+
+            System.out.println("\n📂 Abriendo selector de archivos...");
+
             FileChooser imagenIcono = new FileChooser();
             imagenIcono.setTitle("Seleccione una imagen");
             imagenIcono.getExtensionFilters().add(
@@ -121,20 +131,47 @@ public class macroInterfaz extends Application {
             File archivo = imagenIcono.showOpenDialog(primaryStage);
 
             if (archivo != null) {
-                String ruta = archivo.getAbsolutePath();
-                image = new Image(archivo.toURI().toString());
+                try {
+                    String ruta = archivo.getAbsolutePath();
 
-                botonSeleccionado.setIcono(image);
-                botonSeleccionado.setRutaIcono(ruta);
+                    System.out.println("📸 Cargando imagen...");
+                    System.out.println("   Archivo: " + archivo.getName());
+                    System.out.println("   Ruta: " + ruta);
 
-                // Mostrar preview
-                previewImagen.setImage(image);
-                previewImagen.setVisible(true);
+                    // Cargar la imagen
+                    Image nuevaImagen = new Image(archivo.toURI().toString());
 
-                System.out.println("Imagen cargada para botón [" +
-                        botonSeleccionado.getRow() + "," +
-                        botonSeleccionado.getCol() + "]");
-                System.out.println("  Ruta: " + ruta);
+                    // CRÍTICO: Verificar que la imagen se cargó correctamente
+                    if (nuevaImagen.isError()) {
+                        System.err.println("❌ Error al cargar la imagen");
+                        System.err.println("   La imagen puede estar corrupta o en formato no soportado");
+                        return;
+                    }
+
+                    // Actualizar la imagen global
+                    image = nuevaImagen;
+
+                    // Guardar en el botón seleccionado
+                    botonSeleccionado.setIcono(image);
+                    botonSeleccionado.setRutaIcono(ruta);
+
+                    // Mostrar preview
+                    previewImagen.setImage(image);
+                    previewImagen.setVisible(true);
+
+                    System.out.println("✅ Imagen cargada correctamente");
+                    System.out.println("   Para botón [" +
+                            botonSeleccionado.getRow() + "," +
+                            botonSeleccionado.getCol() + "]");
+                    System.out.println("   Dimensiones: " +
+                            (int)image.getWidth() + "x" + (int)image.getHeight());
+
+                } catch (Exception ex) {
+                    System.err.println("❌ Error al procesar la imagen:");
+                    ex.printStackTrace();
+                }
+            } else {
+                System.out.println("⚠️  Selección de imagen cancelada");
             }
         });
 
@@ -178,17 +215,63 @@ public class macroInterfaz extends Application {
         );
 
         //reiniciamos los valores para borrar todo y lo guardamos
-        borrar.setOnAction(e ->{
+        // REEMPLAZA el setOnAction del botón borrar
+
+        borrar.setOnAction(e -> {
+            if (botonSeleccionado == null) {
+                System.err.println("❌ Error: No hay botón seleccionado");
+                return;
+            }
+
+            System.out.println("\n🗑️ Borrando configuración del botón [" +
+                    botonSeleccionado.getRow() + "," +
+                    botonSeleccionado.getCol() + "]");
+
+            // Limpiar datos del botón
             botonSeleccionado.setRutaIcono("");
             botonSeleccionado.setMacro("");
             botonSeleccionado.setLabel("");
             botonSeleccionado.setIcono(null);
 
+            // Limpiar interfaz
             menuMacros.setValue("");
             previewImagen.setImage(null);
+            previewImagen.setVisible(false);
+
+            // CRÍTICO: Limpiar la referencia global
+            image = null;
+
+            // Guardar cambios
             guardarConfiguracion();
             actualizarLabelBoton(botonSeleccionado);
+
+            System.out.println("✅ Configuración borrada");
         });
+
+        Button testBtn = new Button("🧪 TEST ESP32");
+        testBtn.setPrefWidth(160);
+        testBtn.setStyle(
+                "-fx-background-color: #ff6b6b;" +
+                        "-fx-text-fill: white;" +
+                        "-fx-background-radius: 10;" +
+                        "-fx-padding: 10;"
+        );
+
+        // Agrega este botón en tu interfaz para resetear todo
+        Button resetConfig = new Button("🗑️ Reset Config");
+        resetConfig.setOnAction(e -> {
+            File configFile = new File(CONFIG_FILE);
+            if (configFile.exists()) {
+                configFile.delete();
+                System.out.println("✓ Configuración eliminada");
+                System.out.println("  Reinicia la aplicación para empezar de cero");
+            }
+        });
+
+        Region espaciadorExtra1 = new Region();
+        espaciadorExtra1.setPrefHeight(5);
+
+
 
         //Boton para que se guarde la configuracion final
         Button configurar = new Button("Configurar");
@@ -200,30 +283,86 @@ public class macroInterfaz extends Application {
                         "-fx-padding: 10;"
         );
 
-        configurar.setOnAction(e ->{
-            // Convertir a bytes binarios para mandar la imagen a la pantalla
-            byte[] imageBytes = convertirAArduinoBytes(image);
+        // REEMPLAZA SOLO ESTA SECCIÓN EN TU CÓDIGO
+// Busca donde está el botón "configurar" y reemplaza su setOnAction por esto:
 
-            if(esp32 != null) {
-                esp32.write("IMG:");
-                esp32.writeBytes(imageBytes);
-                System.out.println("Imagen enviada al ESP32");
-            } else {
-                System.err.println("Error: Puerto serial no configurado");
+        configurar.setOnAction(e -> {
+            // VALIDACIONES PRIMERO
+            if (esp32 == null) {
+                System.err.println("❌ Error: Puerto serial no configurado");
+                System.err.println("   Por favor selecciona un puerto COM primero");
+                return;
             }
 
-            //configuracion de los botones
+            if (botonSeleccionado == null) {
+                System.err.println("❌ Error: No hay botón seleccionado");
+                return;
+            }
+
+            if (image == null) {
+                System.err.println("❌ Error: No se ha cargado ninguna imagen");
+                System.err.println("   Por favor carga una imagen primero");
+                return;
+            }
+
+            System.out.println("\n════════════════════════════════════");
+            System.out.println("⚙️  CONFIGURANDO BOTÓN [" +
+                    botonSeleccionado.getRow() + "," +
+                    botonSeleccionado.getCol() + "]");
+            System.out.println("════════════════════════════════════");
+
+            // 1. Configurar macro y label
             String macroSeleccionada = menuMacros.getValue();
-            botonSeleccionado.setMacro(macroSeleccionada);
-            botonSeleccionado.setLabel(macroSeleccionada);
+            if (macroSeleccionada == null || macroSeleccionada.isEmpty()) {
+                System.out.println("⚠️  Advertencia: No se seleccionó ningún macro");
+            } else {
+                botonSeleccionado.setMacro(macroSeleccionada);
+                botonSeleccionado.setLabel(macroSeleccionada);
+                System.out.println("✓ Macro configurado: " + macroSeleccionada);
+            }
+
+            // 2. Convertir imagen a bytes
+            System.out.println("\n📸 Procesando imagen...");
+            byte[] imageBytes = convertirAArduinoBytes(image);
+
+            if (imageBytes == null || imageBytes.length != 900) {
+                System.err.println("❌ Error: Conversión de imagen falló");
+                System.err.println("   Bytes generados: " + (imageBytes != null ? imageBytes.length : 0));
+                return;
+            }
+
+            System.out.println("✓ Imagen convertida correctamente (900 bytes)");
+
+            // 3. Enviar imagen al ESP32
+            System.out.println("\n📡 Enviando imagen al ESP32...");
+
+            try {
+                // IMPORTANTE: Ya NO envíes "IMG:\n" aquí
+                // sendImage() ya lo hace internamente
+                esp32.sendImage(imageBytes);
+                System.out.println("✓ Imagen enviada al ESP32 exitosamente");
+
+            } catch (Exception ex) {
+                System.err.println("❌ Error al enviar imagen:");
+                ex.printStackTrace();
+                return;
+            }
+
+            // 4. Guardar configuración
+            System.out.println("\n💾 Guardando configuración...");
             guardarConfiguracion();
             actualizarLabelBoton(botonSeleccionado);
+
+            System.out.println("════════════════════════════════════");
+            System.out.println("✅ CONFIGURACIÓN COMPLETADA");
+            System.out.println("════════════════════════════════════\n");
         });
 
         Region espaciadorExtra = new Region();
         espaciadorExtra.setPrefHeight(5);
 
         seccionInferior.getChildren().addAll(configurar, espaciadorExtra, borrar);
+        seccionInferior.getChildren().add(resetConfig);
 
         javafx.scene.layout.Region espaciador1 = new javafx.scene.layout.Region();
         espaciador1.setPrefHeight(5); // Espacio entre sección cerrar menu y superior
@@ -312,6 +451,75 @@ public class macroInterfaz extends Application {
         cargarConfiguracion();
 
         primaryStage.show();
+        primaryStage.setOnCloseRequest(event -> {
+            System.out.println("\n🚪 Cerrando aplicación...");
+
+            if (esp32 != null) {
+                try {
+                    // Enviar RESET en lugar de CLEAR
+                    System.out.println("📡 Enviando comando RESET al ESP32...");
+                    esp32.write("RESET");
+
+                    Thread.sleep(500);  // Dar tiempo a procesar
+
+                    // Cerrar puerto
+                    esp32.close();
+
+                    System.out.println("✅ ESP32 reseteado correctamente");
+
+                } catch (Exception e) {
+                    System.err.println("⚠️ Error al cerrar: " + e.getMessage());
+                }
+            }
+
+            System.out.println("👋 Aplicación cerrada\n");
+        });
+    }
+
+    private byte[] crearImagenDePrueba() {
+        // Crear imagen de 120x60 = 900 bytes
+        byte[] testImage = new byte[900];
+
+        // LLENAR TODO DE NEGRO primero (0xFF = todos los bits en 1)
+        for (int i = 0; i < 900; i++) {
+            testImage[i] = (byte) 0xFF; // Todo negro
+        }
+
+        // Ahora hacer un marco blanco y una X blanca
+        int bytesPerRow = 15; // 120 / 8 = 15
+
+        // Marco blanco (filas 0-5 y 55-59, columnas 0-10 y 110-119)
+        for (int y = 0; y < 60; y++) {
+            for (int x = 0; x < 120; x++) {
+                boolean esBorde = (y < 5 || y > 54 || x < 10 || x > 109);
+
+                if (esBorde) {
+                    int byteIndex = y * bytesPerRow + (x / 8);
+                    int bitIndex = 7 - (x % 8);
+                    testImage[byteIndex] &= ~(1 << bitIndex); // Poner en 0 (blanco)
+                }
+            }
+        }
+
+        // Dibujar X blanca en el centro
+        for (int i = 10; i < 50; i++) {
+            // Diagonal principal
+            int x1 = 30 + i;
+            int y1 = 10 + i;
+            int byteIndex1 = y1 * bytesPerRow + (x1 / 8);
+            int bitIndex1 = 7 - (x1 % 8);
+            testImage[byteIndex1] &= ~(1 << bitIndex1);
+
+            // Diagonal inversa
+            int x2 = 30 + i;
+            int y2 = 50 - i;
+            int byteIndex2 = y2 * bytesPerRow + (x2 / 8);
+            int bitIndex2 = 7 - (x2 % 8);
+            testImage[byteIndex2] &= ~(1 << bitIndex2);
+        }
+
+        System.out.println("✓ Imagen de prueba: fondo negro + marco blanco + X blanca");
+        return testImage;
     }
 
     private void abrirMenu(VBox menu, StackPane teclado) {
@@ -342,10 +550,20 @@ public class macroInterfaz extends Application {
         launch(args);
     }
 
+    // REEMPLAZA el método convertirAArduinoBytes en tu clase
+
     public static byte[] convertirAArduinoBytes(Image img) {
+        if (img == null) {
+            System.err.println("❌ Error: Imagen es null");
+            return null;
+        }
+
         int width = 120;
         int height = 60;
         int umbral = 220;
+
+        System.out.println("🖼️  Dimensiones originales: " +
+                (int)img.getWidth() + "x" + (int)img.getHeight());
 
         // Convertir Image de JavaFX a BufferedImage
         BufferedImage buffered = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
@@ -366,6 +584,9 @@ public class macroInterfaz extends Application {
         // Calcular posición para centrar
         int x = (width - scaledWidth) / 2;
         int y = (height - scaledHeight) / 2;
+
+        System.out.println("📐 Escalado: " + scaledWidth + "x" + scaledHeight +
+                " (centrado en " + x + "," + y + ")");
 
         // Dibujar imagen escalada con calidad
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
@@ -408,7 +629,13 @@ public class macroInterfaz extends Application {
             }
         }
 
-        System.out.println("Bytes generados: " + byteIndex);
+        System.out.println("✓ Bytes generados: " + byteIndex + "/900");
+
+        if (byteIndex != 900) {
+            System.err.println("❌ Error: Se generaron " + byteIndex + " bytes en lugar de 900");
+            return null;
+        }
+
         return imageData;
     }
 
@@ -481,6 +708,11 @@ public class macroInterfaz extends Application {
                     btn.setMacro(command);
                     if (!imagePath.isEmpty()) {
                         btn.setRutaIcono(imagePath);
+                        File imagenFile = new File(imagePath);
+                        if (imagenFile.exists()) {
+                            Image img = new Image(imagenFile.toURI().toString());
+                            btn.setIcono(img);
+                        }
                     }
 
                     // Actualizar visualmente el botón
@@ -500,40 +732,89 @@ public class macroInterfaz extends Application {
             e.printStackTrace();
         }
     }
+
+    // REEMPLAZA estos dos métodos en tu clase
+
     private void actualizarMenuConBoton(MacroBoton macroB) {
+        if (macroB == null) {
+            System.err.println("⚠️ actualizarMenuConBoton: botón es null");
+            return;
+        }
+
+        System.out.println("\n🔄 Actualizando menú para botón [" +
+                macroB.getRow() + "," + macroB.getCol() + "]");
+
         // Actualizar el ComboBox con el macro guardado
-        if (!macroB.getMacro().isEmpty()) {
-            menuMacros.setValue(macroB.getMacro());
+        String macro = macroB.getMacro();
+        if (macro != null && !macro.isEmpty()) {
+            menuMacros.setValue(macro);
+            System.out.println("  Macro: " + macro);
         } else {
             menuMacros.setValue("");
+            System.out.println("  Sin macro configurado");
         }
 
         // Mostrar imagen si existe
-        if (macroB.getIcono() != null) {
-            previewImagen.setImage(macroB.getIcono());
+        Image icono = macroB.getIcono();
+        if (icono != null) {
+            image = icono;  // CRÍTICO: Actualizar la referencia global
+            previewImagen.setImage(icono);
             previewImagen.setVisible(true);
+            System.out.println("  ✓ Imagen existente cargada en preview");
         } else {
+            image = null;  // CRÍTICO: Limpiar la referencia global
+            previewImagen.setImage(null);
             previewImagen.setVisible(false);
+            System.out.println("  Sin imagen - Puedes cargar una nueva");
         }
     }
 
     private void actualizarLabelBoton(MacroBoton macroBoton) {
-        if (macroBoton != null && macroBoton.getBoton() != null) {
-            Button botonVisual = macroBoton.getBoton();
-            String label = macroBoton.getLabel();
-
-            if (label != null && !label.isEmpty()) {
-                // Si hay label, mostrarlo
-                botonVisual.setText(label);
-                System.out.println("Label actualizado: '" + label + "' para botón [" +
-                        macroBoton.getRow() + "," + macroBoton.getCol() + "]");
-            } else {
-                // Si no hay label, dejar el botón vacío
-                botonVisual.setText("");
-                System.out.println("Label removido del botón [" +
-                        macroBoton.getRow() + "," + macroBoton.getCol() + "]");
-            }
+        if (macroBoton == null) {
+            System.err.println("⚠️ actualizarLabelBoton: botón es null");
+            return;
         }
+
+        if (macroBoton.getBoton() == null) {
+            System.err.println("⚠️ actualizarLabelBoton: botón visual es null");
+            return;
+        }
+
+        Button botonVisual = macroBoton.getBoton();
+        String label = macroBoton.getLabel();
+
+        // Actualizar texto del botón
+        if (label != null && !label.isEmpty()) {
+            botonVisual.setText(label);
+            System.out.println("✓ Label actualizado: " + label);
+        } else {
+            botonVisual.setText("");
+            System.out.println("✓ Label limpiado");
+        }
+
+        // Actualizar preview de imagen
+        Image icono = macroBoton.getIcono();
+        if (icono != null) {
+            previewImagen.setImage(icono);
+            previewImagen.setVisible(true);
+        } else {
+            previewImagen.setImage(null);
+            previewImagen.setVisible(false);
+        }
+
+        // Actualizar ComboBox
+        String macro = macroBoton.getMacro();
+        if (macro != null && !macro.isEmpty()) {
+            menuMacros.setValue(macro);
+        } else {
+            menuMacros.setValue("");
+        }
+
+        // Actualizar la referencia global
+        image = icono;
     }
+
+
+
 
 }
