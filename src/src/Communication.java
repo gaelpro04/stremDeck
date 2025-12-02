@@ -7,7 +7,7 @@ public class Communication {
     public Communication(int commPort) {
         this.commPort = commPort;
         sp = SerialPort.getCommPorts()[this.commPort];
-        sp.setBaudRate(115200);
+        sp.setBaudRate(921600);
         sp.setComPortTimeouts(SerialPort.TIMEOUT_WRITE_BLOCKING, 0, 0);
 
         if (!sp.openPort()) {
@@ -229,7 +229,7 @@ public class Communication {
         }
         this.commPort = commPort;
         sp = SerialPort.getCommPorts()[this.commPort];
-        sp.setBaudRate(115200);
+        sp.setBaudRate(921600);
         sp.setComPortTimeouts(SerialPort.TIMEOUT_WRITE_BLOCKING, 0, 0);
         sp.openPort();
     }
