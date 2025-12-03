@@ -7,6 +7,7 @@ public class MacroBoton {
     private Button boton;
     private String macro;
     private String label;
+    private String ruta;
     private int row;
     private int col;
 
@@ -17,6 +18,7 @@ public class MacroBoton {
         this.macro = "";
         this.label = "";
         this.rutaIcono = "";
+        this.ruta = "";
     }
 
     public Image getIcono() {
@@ -84,5 +86,13 @@ public class MacroBoton {
 
     public boolean hasConfiguration() {
         return !macro.isEmpty() || !label.isEmpty() || !rutaIcono.isEmpty();
+    }
+
+    public String getRuta() {
+        return ruta;
+    }
+
+    public void setRuta(String ruta) {
+        this.ruta = ruta;
     }
 }

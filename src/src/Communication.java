@@ -3,12 +3,17 @@ import com.fazecast.jSerialComm.SerialPort;
 public class Communication {
     private SerialPort sp;
     private int commPort;
+    private SerialListener listener;
+
+    private volatile boolean running = true;
+    private Thread lectorThread = null;
+
 
     public Communication(int commPort) {
         this.commPort = commPort;
         sp = SerialPort.getCommPorts()[this.commPort];
-        sp.setBaudRate(921600);
-        sp.setComPortTimeouts(SerialPort.TIMEOUT_WRITE_BLOCKING, 0, 0);
+        sp.setBaudRate(115200);
+        sp.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 50, 0);
 
         if (!sp.openPort()) {
             throw new RuntimeException("No se pudo abrir el puerto COM" + commPort);
@@ -31,8 +36,9 @@ public class Communication {
 
     // NUEVO: Hilo para leer constantemente del ESP32
     private void iniciarLectorSerial() {
+        running = true;
         Thread lector = new Thread(() -> {
-            while (sp.isOpen()) {
+            while (sp.isOpen() && running) {
                 try {
                     if (sp.bytesAvailable() > 0) {
                         byte[] buffer = new byte[sp.bytesAvailable()];
@@ -42,17 +48,53 @@ public class Communication {
                         // Mostrar respuestas del ESP32 en consola
                         if (!respuesta.trim().isEmpty()) {
                             System.out.println("📥 ESP32: " + respuesta.trim());
+
+                            if (listener != null) {
+                                listener.datoSeriales(respuesta.trim());
+                            }
+
+                            manejarBoton(respuesta);
                         }
                     }
                     Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    break;
                 } catch (Exception e) {
-                    // Ignorar errores de lectura
+                    // mostrar y seguir intentando (no matar hilo)
+                    e.printStackTrace();
+                    try { Thread.sleep(200); } catch (InterruptedException ex) { break; }
                 }
             }
         });
         lector.setDaemon(true);
         lector.start();
     }
+
+    private ButtonPressListener buttonListener = null;
+
+    public void setButtonPressListener(ButtonPressListener listener) {
+        this.buttonListener = listener;
+    }
+
+    private void manejarBoton(String comando) {
+        try {
+            String[] partes = comando.trim().split(",");
+
+            if (partes.length == 2) {
+                int fila = Integer.parseInt(partes[0]);
+                int col = Integer.parseInt(partes[1]);
+
+                if (buttonListener != null) {
+                    buttonListener.onButtonPressed(fila, col);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("ERRO PROCESANDO COMANDO DE BOTON: " + comando);
+            e.printStackTrace();
+        }
+
+    }
+
 
     // NUEVO: Método para limpiar buffers
     private void clearBuffers() {
@@ -67,6 +109,10 @@ public class Communication {
         } catch (Exception e) {
             e.printStackTrace();
         }
+}
+
+        public void setSerialListener(SerialListener listener) {
+        this.listener = listener;
     }
 
     public String read() {
@@ -194,30 +240,42 @@ public class Communication {
         }
 
         // 5. Enviar datos binarios
-        writeBytes(imageData);
+//        writeBytes(imageData);
 
         System.out.println(">>> Imagen enviada y mostrada <<<\n");
     }
 
     public void close() {
-        if (sp != null && sp.isOpen()) {
-            try {
-                System.out.println("🔄 Cerrando puerto serial...");
+        System.out.println("🔻 Cerrando comunicación SERIAL de forma segura...");
 
-                // Enviar RESET en lugar de CLEAR
-                write("RESET");
-                Thread.sleep(500);  // Esperar a que procese
+        try {
+            // 1. Detener hilo lector
+            running = false;
 
-                System.out.println("✓ Comando RESET enviado");
-
-            } catch (Exception e) {
-                System.err.println("⚠️ Error al enviar RESET: " + e.getMessage());
+            if (lectorThread != null && lectorThread.isAlive()) {
+                lectorThread.interrupt();
+                try { lectorThread.join(300); } catch (InterruptedException ignored) {}
             }
 
-            sp.closePort();
-            System.out.println("✅ Puerto cerrado");
+            // 2. Vaciar buffers
+            if (sp != null) {
+                try { sp.flushIOBuffers(); } catch (Exception ignored) {}
+
+                // 3. CERRAR PUERTO LIMPIO (ESTO ES LO QUE EVITA EL FREEZE)
+                if (sp.isOpen()) {
+                    sp.closePort();
+                }
+            }
+
+            System.out.println("✅ Puerto cerrado sin congelar el ESP32");
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
+
+
+
 
     public int getCommPort() {
         return commPort;
@@ -229,7 +287,7 @@ public class Communication {
         }
         this.commPort = commPort;
         sp = SerialPort.getCommPorts()[this.commPort];
-        sp.setBaudRate(921600);
+        sp.setBaudRate(115200);
         sp.setComPortTimeouts(SerialPort.TIMEOUT_WRITE_BLOCKING, 0, 0);
         sp.openPort();
     }
