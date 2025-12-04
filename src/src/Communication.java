@@ -78,6 +78,7 @@ public class Communication {
 
     private void manejarBoton(String comando) {
         try {
+
             String[] partes = comando.trim().split(",");
 
             if (partes.length == 2) {
@@ -89,8 +90,7 @@ public class Communication {
                 }
             }
         } catch (Exception e) {
-            System.err.println("ERRO PROCESANDO COMANDO DE BOTON: " + comando);
-            e.printStackTrace();
+            System.out.println("NO ES BOTON: " + comando);
         }
 
     }

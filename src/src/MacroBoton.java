@@ -85,7 +85,7 @@ public class MacroBoton {
     }
 
     public boolean hasConfiguration() {
-        return !macro.isEmpty() || !label.isEmpty() || !rutaIcono.isEmpty();
+        return !macro.isEmpty() || !label.isEmpty() || !rutaIcono.isEmpty() || !ruta.isEmpty();
     }
 
     public String getRuta() {
