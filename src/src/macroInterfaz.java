@@ -37,7 +37,7 @@ public class macroInterfaz extends Application {
     private Communication esp32;
     private HashMap<String, MacroBoton> botones = new HashMap<>();
     private MacroBoton botonSeleccionado = null;
-    private static final String CONFIG_FILE = "C:\\Users\\sgsg_\\IdeaProjects\\stremDeck\\macro_config.dat";
+    private static final String CONFIG_FILE = "C:\\Users\\bombo\\OneDrive\\Desktop\\6to\\Avanzada\\ProyectoFinalGUI\\stremDeck\\macro_config.dat";
     private ComboBox<String> menuMacros;
     private ImageView previewImagen;
     private Label labelBotonSeleccionado;
