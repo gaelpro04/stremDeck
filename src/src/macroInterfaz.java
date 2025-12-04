@@ -812,11 +812,11 @@ public class macroInterfaz extends Application {
 
     private void actualizarMenuConBoton(MacroBoton macroB) {
         if (macroB == null) {
-            System.err.println("⚠️ actualizarMenuConBoton: botón es null");
+            System.err.println("actualizarMenuConBoton: botón es null");
             return;
         }
 
-        System.out.println("\n🔄 Actualizando menú para botón [" +
+        System.out.println("\nActualizando menú para botón [" +
                 macroB.getRow() + "," + macroB.getCol() + "]");
 
         // Actualizar el ComboBox con el macro guardado
@@ -846,12 +846,12 @@ public class macroInterfaz extends Application {
 
     private void actualizarLabelBoton(MacroBoton macroBoton) {
         if (macroBoton == null) {
-            System.err.println("⚠️ actualizarLabelBoton: botón es null");
+            System.err.println("actualizarLabelBoton: botón es null");
             return;
         }
 
         if (macroBoton.getBoton() == null) {
-            System.err.println("⚠️ actualizarLabelBoton: botón visual es null");
+            System.err.println("actualizarLabelBoton: botón visual es null");
             return;
         }
 
@@ -919,7 +919,7 @@ public class macroInterfaz extends Application {
 
     private void abrirVentanaNuevaMacro() {
         if (botonSeleccionado == null) {
-            System.err.println("❌ Selecciona un botón primero");
+            System.err.println("Selecciona un botón primero");
             return;
         }
 
