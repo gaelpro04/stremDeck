@@ -203,46 +203,67 @@ public class Communication {
         }
     }
 
-    // NUEVO: Método para enviar una imagen completa (comando + datos)
     public void sendImage(byte[] imageData) {
-        if (imageData == null) {
-            System.err.println("Error: No hay datos de imagen");
+        if (imageData == null || imageData.length != 900) {
+            System.err.println("❌ Error: Se necesitan exactamente 900 bytes");
             return;
         }
 
-        if (imageData.length != 900) {
-            System.err.println("Error: La imagen debe ser exactamente 900 bytes (recibido: " + imageData.length + ")");
-            return;
-        }
-
-        System.out.println("\n>>> Enviando nueva imagen <<<");
-
-        // 1. Limpiar pantalla primero
-        write("CLEAR");
+        System.out.println("\n=== ENVIANDO IMAGEN A ESP32 (Optimizado) ===");
 
         try {
-            Thread.sleep(300);
-        } catch (InterruptedException e) {
+            // 1. Preparar buffers
+            clearBuffers();
+            Thread.sleep(150);
+
+            // 2. Enviar encabezado
+            sp.writeBytes("IMG:".getBytes("UTF-8"), 4);
+            Thread.sleep(50);
+
+            // 3. Enviar datos en formato hexadecimal en chunks
+            int chunkSize = 20; // 128 bytes de imagen = ~640 caracteres hex
+            int totalBytes = 0;
+
+            for (int i = 0; i < imageData.length; i += chunkSize) {
+                int end = Math.min(i + chunkSize, imageData.length);
+                StringBuilder chunkHex = new StringBuilder();
+
+                for (int j = i; j < end; j++) {
+                    chunkHex.append(String.format("0x%02x", imageData[j] & 0xFF));
+                    if (j < imageData.length - 1) {
+                        chunkHex.append(",");
+                    }
+                }
+
+                byte[] chunkBytes = chunkHex.toString().getBytes("UTF-8");
+                sp.writeBytes(chunkBytes, chunkBytes.length);
+                totalBytes += (end - i);
+
+                // Mostrar progreso
+                System.out.printf("  Enviado: %d/900 bytes (%.1f%%)\n",
+                        totalBytes, (totalBytes * 100.0 / 900));
+
+                Thread.sleep(10); // Delay mínimo entre chunks
+            }
+
+            // 4. Enviar final de línea
+            sp.writeBytes("\n".getBytes("UTF-8"), 1);
+            sp.flushIOBuffers();
+
+            System.out.println("✓ Imagen enviada en formato hexadecimal");
+
+            // 5. Esperar confirmación
+            Thread.sleep(500);
+            if (sp.bytesAvailable() > 0) {
+                byte[] respuesta = new byte[sp.bytesAvailable()];
+                sp.readBytes(respuesta, respuesta.length);
+                System.out.println("📥 ESP32: " + new String(respuesta).trim());
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Error en sendImage:");
             e.printStackTrace();
         }
-
-        // 2. Limpiar buffers previos
-        clearBuffers();
-
-        // 3. Enviar comando IMG: (SIN \n porque write() ya lo agrega)
-        write("IMG:");
-
-        // 4. Esperar confirmación
-        try {
-            Thread.sleep(300);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        // 5. Enviar datos binarios
-//        writeBytes(imageData);
-
-        System.out.println(">>> Imagen enviada y mostrada <<<\n");
     }
 
     public void close() {
