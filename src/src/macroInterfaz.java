@@ -37,7 +37,7 @@ public class macroInterfaz extends Application {
     private Communication esp32;
     private HashMap<String, MacroBoton> botones = new HashMap<>();
     private MacroBoton botonSeleccionado = null;
-    private static final String CONFIG_FILE = "C:\\Users\\bombo\\OneDrive\\Desktop\\6to\\Avanzada\\ProyectoFinalGUI\\stremDeck\\macro_config.dat";
+    private static final String CONFIG_FILE = "C:\\Users\\sgsg_\\IdeaProjects\\stremDeck\\macro_config.dat";
     private ComboBox<String> menuMacros;
     private ImageView previewImagen;
     private Label labelBotonSeleccionado;
@@ -59,11 +59,11 @@ public class macroInterfaz extends Application {
         // StackPane para la carcasa y el teclado
         StackPane keyboardContainer = new StackPane();
         Label labelTitulo = new Label("Configuracion de macros");
-        labelTitulo.setFont(Font.font("Arial", FontWeight.NORMAL, 17));
-        labelTitulo.setStyle("-fx-background-color: rgba(226,213,226,0.11);" +
+        labelTitulo.setFont(Font.font("Arial", FontWeight.NORMAL, 25));
+        labelTitulo.setStyle("-fx-background-color: #1e1e1e;" +
                 "-fx-text-fill: white;" +
                 "-fx-font-weight: bold;" +
-                "-fx-background-radius: 10;");
+                "-fx-background-radius: 20;");
 
         // Carcasa (rectángulo que representa la caja del teclado)
         Rectangle carcasa = new Rectangle(360, 360);
@@ -159,11 +159,11 @@ public class macroInterfaz extends Application {
         cargarImagenBtn.setOnAction(e -> {
             // VALIDAR que haya un botón seleccionado
             if (botonSeleccionado == null) {
-                System.err.println("❌ Error: Debes seleccionar un botón primero");
+                System.err.println("Error: Debes seleccionar un botón primero");
                 return;
             }
 
-            System.out.println("\n📂 Abriendo selector de archivos...");
+            System.out.println("\nAbriendo selector de archivos...");
 
             FileChooser imagenIcono = new FileChooser();
             imagenIcono.setTitle("Seleccione una imagen");
@@ -186,8 +186,8 @@ public class macroInterfaz extends Application {
 
                     // CRÍTICO: Verificar que la imagen se cargó correctamente
                     if (nuevaImagen.isError()) {
-                        System.err.println("❌ Error al cargar la imagen");
-                        System.err.println("   La imagen puede estar corrupta o en formato no soportado");
+                        System.err.println("Error al cargar la imagen");
+                        System.err.println("La imagen puede estar corrupta o en formato no soportado");
                         return;
                     }
 
@@ -202,7 +202,7 @@ public class macroInterfaz extends Application {
                     previewImagen.setImage(image);
                     previewImagen.setVisible(true);
 
-                    System.out.println("✅ Imagen cargada correctamente");
+                    System.out.println("Imagen cargada correctamente");
                     System.out.println("   Para botón [" +
                             botonSeleccionado.getRow() + "," +
                             botonSeleccionado.getCol() + "]");
@@ -210,11 +210,11 @@ public class macroInterfaz extends Application {
                             (int)image.getWidth() + "x" + (int)image.getHeight());
 
                 } catch (Exception ex) {
-                    System.err.println("❌ Error al procesar la imagen:");
+                    System.err.println("Error al procesar la imagen:");
                     ex.printStackTrace();
                 }
             } else {
-                System.out.println("⚠️  Selección de imagen cancelada");
+                System.out.println("Selección de imagen cancelada");
             }
         });
 
@@ -240,33 +240,33 @@ public class macroInterfaz extends Application {
                     String macro = btn.getMacro();
                     Image imagen = btn.getIcono();
 
-                    System.out.println("📋 Configuración del botón:");
+                    System.out.println("Configuración del botón:");
                     System.out.println("   Macro: " + (macro != null && !macro.isEmpty() ? macro : "Sin macro"));
                     System.out.println("   Ruta: " + (ruta != null && !ruta.isEmpty() ? ruta : "Sin ruta"));
                     System.out.println("   Imagen: " + (imagen != null ? "Sí" : "No"));
 
                     if (ruta != null && !ruta.isEmpty()) {
-                        System.out.println("\n🚀 Ejecutando macro...");
+                        System.out.println("\nEjecutando macro...");
                         ejecutarMacro(ruta);
-                        System.out.println("✅ Macro ejecutado");
+                        System.out.println("Macro ejecutado");
                     } else {
-                        System.out.println("\n⚠️ Este botón no tiene macro configurado");
+                        System.out.println("\nEste botón no tiene macro configurado");
                     }
 
                     if (imagen != null && esp32 != null) {
-                        System.out.println("\n📺 Mostrando imagen en display...");
+                        System.out.println("\nMostrando imagen en display...");
                         byte[] imageBytes = convertirAArduinoBytes(imagen);
                         if (imageBytes != null && imageBytes.length == 900) {
                             try {
                                 esp32.sendImage(imageBytes);
-                                System.out.println("✅ Imagen mostrada en display");
+                                System.out.println("Imagen mostrada en display");
                             } catch (Exception ex) {
-                                System.err.println("❌ Error al mostrar imagen: " + ex.getMessage());
+                                System.err.println("Error al mostrar imagen: " + ex.getMessage());
                             }
                         }
                     }
                 } else {
-                    System.out.println("⚠️ Botón no encontrado en la configuración");
+                    System.out.println("Botón no encontrado en la configuración");
                 }
             });
         });
@@ -315,11 +315,11 @@ public class macroInterfaz extends Application {
 
         borrar.setOnAction(e -> {
             if (botonSeleccionado == null) {
-                System.err.println("❌ Error: No hay botón seleccionado");
+                System.err.println("Error: No hay botón seleccionado");
                 return;
             }
 
-            System.out.println("\n🗑️ Borrando configuración del botón [" +
+            System.out.println("\nBorrando configuración del botón [" +
                     botonSeleccionado.getRow() + "," +
                     botonSeleccionado.getCol() + "]");
 
@@ -342,7 +342,7 @@ public class macroInterfaz extends Application {
             guardarConfiguracion();
             actualizarLabelBoton(botonSeleccionado);
 
-            System.out.println("✅ Configuración borrada");
+            System.out.println("Configuración borrada");
         });
 
         Region espaciadorExtra1 = new Region();
@@ -366,24 +366,22 @@ public class macroInterfaz extends Application {
         configurar.setOnAction(e -> {
             // VALIDACIONES PRIMERO
             if (esp32 == null) {
-                System.err.println("❌ Error: Puerto serial no configurado");
+                System.err.println("Error: Puerto serial no configurado");
                 System.err.println("   Por favor selecciona un puerto COM primero");
                 return;
             }
 
             if (botonSeleccionado == null) {
-                System.err.println("❌ Error: No hay botón seleccionado");
+                System.err.println("Error: No hay botón seleccionado");
                 return;
             }
 
             if (image == null) {
-                System.err.println("❌ Error: No se ha cargado ninguna imagen");
-                System.err.println("   Por favor carga una imagen primero");
-                return;
+                System.out.println("No se ha cargado ninguna imagen");
             }
 
             System.out.println("\n════════════════════════════════════");
-            System.out.println("⚙️  CONFIGURANDO BOTÓN [" +
+            System.out.println("CONFIGURANDO BOTÓN [" +
                     botonSeleccionado.getRow() + "," +
                     botonSeleccionado.getCol() + "]");
             System.out.println("════════════════════════════════════");
@@ -391,7 +389,7 @@ public class macroInterfaz extends Application {
             // 1. Configurar macro y label
             String macroSeleccionada = menuMacros.getValue();
             if (macroSeleccionada == null || macroSeleccionada.isEmpty()) {
-                System.out.println("⚠️  Advertencia: No se seleccionó ningún macro");
+                System.out.println("Advertencia: No se seleccionó ningún macro");
             } else {
                 botonSeleccionado.setMacro(macroSeleccionada);
                 botonSeleccionado.setLabel(macroSeleccionada);
@@ -402,38 +400,40 @@ public class macroInterfaz extends Application {
                 System.out.println("✓ Macro configurado: " + macroSeleccionada);
             }
 
-            // 2. Convertir imagen a bytes
-            System.out.println("\n📸 Procesando imagen...");
-            byte[] imageBytes = convertirAArduinoBytes(image);
+            if (image != null) {
+                // 2. Convertir imagen a bytes
+                System.out.println("\nProcesando imagen...");
+                byte[] imageBytes = convertirAArduinoBytes(image);
 
-            if (imageBytes == null || imageBytes.length != 900) {
-                System.err.println("❌ Error: Conversión de imagen falló");
-                System.err.println("   Bytes generados: " + (imageBytes != null ? imageBytes.length : 0));
-                return;
-            }
+                if (imageBytes == null || imageBytes.length != 900) {
+                    System.err.println("Error: Conversión de imagen falló");
+                    System.err.println("   Bytes generados: " + (imageBytes != null ? imageBytes.length : 0));
+                    return;
+                }
 
-            System.out.println("✓ Imagen convertida correctamente (900 bytes)");
+                System.out.println("✓ Imagen convertida correctamente (900 bytes)");
 
-            // 3. Enviar imagen al ESP32
-            System.out.println("\n📡 Enviando imagen al ESP32...");
+                // 3. Enviar imagen al ESP32
+                System.out.println("\nEnviando imagen al ESP32...");
 
-            try {
-                esp32.sendImage(imageBytes);
-                System.out.println("✓ Imagen enviada al ESP32 exitosamente");
+                try {
+                    esp32.sendImage(imageBytes);
+                    System.out.println("Imagen enviada al ESP32 exitosamente");
 
-            } catch (Exception ex) {
-                System.err.println("❌ Error al enviar imagen:");
-                ex.printStackTrace();
-                return;
+                } catch (Exception ex) {
+                    System.err.println("Error al enviar imagen:");
+                    ex.printStackTrace();
+                    return;
+                }
             }
 
             // 4. Guardar configuración
-            System.out.println("\n💾 Guardando configuración...");
+            System.out.println("\nGuardando configuración...");
             guardarConfiguracion();
             actualizarLabelBoton(botonSeleccionado);
 
             System.out.println("════════════════════════════════════");
-            System.out.println("✅ CONFIGURACIÓN COMPLETADA");
+            System.out.println("CONFIGURACIÓN COMPLETADA");
             System.out.println("════════════════════════════════════\n");
         });
 
@@ -534,7 +534,7 @@ public class macroInterfaz extends Application {
 
         primaryStage.show();
         primaryStage.setOnCloseRequest(event -> {
-            System.out.println("\n🚪 Cerrando aplicación...");
+            System.out.println("\nCerrando aplicación...");
 
             if (esp32 != null) {
                 esp32.close();
@@ -542,7 +542,7 @@ public class macroInterfaz extends Application {
                 System.exit(0);
             }
 
-            System.out.println("👋 Aplicación cerrada\n");
+            System.out.println("Aplicación cerrada\n");
         });
     }
 
@@ -624,7 +624,7 @@ public class macroInterfaz extends Application {
 
     public static byte[] convertirAArduinoBytes(Image img) {
         if (img == null) {
-            System.err.println("❌ Error: Imagen es null");
+            System.out.println("Error: Imagen es null");
             return null;
         }
 
@@ -632,7 +632,7 @@ public class macroInterfaz extends Application {
         int height = 60;
         int umbral = 220;
 
-        System.out.println("🖼️  Dimensiones originales: " +
+        System.out.println("🖼Dimensiones originales: " +
                 (int)img.getWidth() + "x" + (int)img.getHeight());
 
         // Convertir Image de JavaFX a BufferedImage
@@ -655,7 +655,7 @@ public class macroInterfaz extends Application {
         int x = (width - scaledWidth) / 2;
         int y = (height - scaledHeight) / 2;
 
-        System.out.println("📐 Escalado: " + scaledWidth + "x" + scaledHeight +
+        System.out.println("Escalado: " + scaledWidth + "x" + scaledHeight +
                 " (centrado en " + x + "," + y + ")");
 
         // Dibujar imagen escalada con calidad
@@ -702,7 +702,7 @@ public class macroInterfaz extends Application {
         System.out.println("✓ Bytes generados: " + byteIndex + "/900");
 
         if (byteIndex != 900) {
-            System.err.println("❌ Error: Se generaron " + byteIndex + " bytes en lugar de 900");
+            System.err.println("Error: Se generaron " + byteIndex + " bytes en lugar de 900");
             return null;
         }
 
@@ -812,11 +812,11 @@ public class macroInterfaz extends Application {
 
     private void actualizarMenuConBoton(MacroBoton macroB) {
         if (macroB == null) {
-            System.err.println("⚠️ actualizarMenuConBoton: botón es null");
+            System.err.println("actualizarMenuConBoton: botón es null");
             return;
         }
 
-        System.out.println("\n🔄 Actualizando menú para botón [" +
+        System.out.println("\nActualizando menú para botón [" +
                 macroB.getRow() + "," + macroB.getCol() + "]");
 
         // Actualizar el ComboBox con el macro guardado
@@ -846,12 +846,12 @@ public class macroInterfaz extends Application {
 
     private void actualizarLabelBoton(MacroBoton macroBoton) {
         if (macroBoton == null) {
-            System.err.println("⚠️ actualizarLabelBoton: botón es null");
+            System.err.println("actualizarLabelBoton: botón es null");
             return;
         }
 
         if (macroBoton.getBoton() == null) {
-            System.err.println("⚠️ actualizarLabelBoton: botón visual es null");
+            System.err.println("actualizarLabelBoton: botón visual es null");
             return;
         }
 
@@ -897,12 +897,17 @@ public class macroInterfaz extends Application {
             }
 
             if (ruta.equals("LEDs")) {
-                if (modoLED > 14) {
+                if (modoLED > 15) {
                     modoLED = 1;
-                    esp32.write(String.valueOf(modoLED));
+                    String comandoLed = "LED:" + modoLED;
+                    System.out.println("SE ENVIARA POR SERIAL");
+                    esp32.write(comandoLed);
+                    ++modoLED;
 
                 } else {
-                    esp32.write(String.valueOf(modoLED));
+                    String comandoLed = "LED:" + modoLED;
+                    System.out.println("SE ENVIARA POR SERIAL");
+                    esp32.write(comandoLed);
                     ++modoLED;
 
                 }
@@ -919,7 +924,7 @@ public class macroInterfaz extends Application {
 
     private void abrirVentanaNuevaMacro() {
         if (botonSeleccionado == null) {
-            System.err.println("❌ Selecciona un botón primero");
+            System.err.println("Selecciona un botón primero");
             return;
         }
 
@@ -945,10 +950,18 @@ public class macroInterfaz extends Application {
         ComboBox<String> tipoMacro = new ComboBox<>();
         tipoMacro.getItems().addAll("Pagina web", "Ejecutable", "Texto", "Sonido", "LEDs");
         tipoMacro.setOnAction(escogido -> {
+
+            Label nombreLabel = new Label("Ingresa el nombre del macro");
+            nombreLabel.setTextFill(Color.WHITE);
+            nombreLabel.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+
+            TextField capNombre = new TextField();
+            capNombre.setPrefWidth(130);
+
             switch (tipoMacro.getSelectionModel().getSelectedItem()) {
                 case "Pagina web":
                     root.getChildren().clear();
-                    root.getChildren().addAll(titulo, tipoMacro, btnGuardar);
+                    root.getChildren().addAll(titulo, tipoMacro,  nombreLabel, capNombre, btnGuardar);
 
                     TextField capRuta = new TextField();
                     capRuta.setPrefWidth(150);
@@ -970,6 +983,7 @@ public class macroInterfaz extends Application {
 
                             if (botonSeleccionado != null) {
                                 botonSeleccionado.setRuta(ruta);
+                                botonSeleccionado.setMacro(capNombre.getText());
                             }
                         }
 
@@ -988,7 +1002,7 @@ public class macroInterfaz extends Application {
                     break;
                 case "Ejecutable":
                     root.getChildren().clear();
-                    root.getChildren().addAll(titulo, tipoMacro, btnGuardar);
+                    root.getChildren().addAll(titulo, tipoMacro, nombreLabel, capNombre, btnGuardar);
 
                     FileChooser imagenIcono = new FileChooser();
                     imagenIcono.setTitle("Seleccione una imagen");
@@ -1008,6 +1022,7 @@ public class macroInterfaz extends Application {
                         btnGuardar.setOnAction(evento -> {
                             if (botonSeleccionado != null) {
                                 botonSeleccionado.setRuta(archivo.getAbsolutePath());
+                                botonSeleccionado.setMacro(capNombre.getText());
                             }
 
                             new Thread(() -> {
@@ -1026,16 +1041,18 @@ public class macroInterfaz extends Application {
                     break;
                 case "Texto":
                     root.getChildren().clear();
-                    root.getChildren().addAll(titulo, tipoMacro, btnGuardar);
+                    root.getChildren().addAll(titulo, tipoMacro, nombreLabel, capNombre, btnGuardar);
 
                     break;
                 case "Sonido":
                     root.getChildren().clear();
-                    root.getChildren().addAll(titulo, tipoMacro, btnGuardar);
+                    root.getChildren().addAll(titulo, tipoMacro, nombreLabel, capNombre, btnGuardar);
+
                     break;
                 case "LEDs":
                     root.getChildren().clear();
-                    root.getChildren().addAll(titulo, tipoMacro, btnGuardar);
+                    root.getChildren().addAll(titulo, tipoMacro, nombreLabel, capNombre, btnGuardar);
+
 
                     btnGuardar.setOnAction(evento -> {
                         Label configurado = new Label("Configurado");
@@ -1044,7 +1061,10 @@ public class macroInterfaz extends Application {
                         configurado.setFont(Font.font("Arial", FontWeight.BOLD, 14));
                         root.getChildren().add(2, configurado);
 
-                        botonSeleccionado.setRuta("LEDs");
+                        if (botonSeleccionado != null) {
+                            botonSeleccionado.setRuta("LEDs");
+                            botonSeleccionado.setMacro(capNombre.getText());
+                        }
 
                         new Thread(() -> {
                             try {
@@ -1056,6 +1076,32 @@ public class macroInterfaz extends Application {
                         }).start();
                     });
                     break;
+//                case "Intensidad LEDs":
+//                    root.getChildren().clear();
+//                    root.getChildren().addAll(titulo, tipoMacro, nombreLabel, capNombre, btnGuardar);
+//
+//                    btnGuardar.setOnAction(evento -> {
+//                        Label configurado = new Label("Configurado");
+//
+//                        configurado.setTextFill(Color.WHITE);
+//                        configurado.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+//                        root.getChildren().add(2, configurado);
+//
+//                        if (botonSeleccionado != null) {
+//                            botonSeleccionado.setRuta("INT");
+//                            botonSeleccionado.setMacro(capNombre.getText());
+//                        }
+//
+//                        new Thread(() -> {
+//                            try {
+//                                Thread.sleep(1000);
+//                                javafx.application.Platform.runLater(() -> stage.close());
+//                            } catch (InterruptedException e) {
+//                                e.printStackTrace();
+//                            }
+//                        }).start();
+//                    });
+//                    break;
 
             }
         });
@@ -1081,7 +1127,7 @@ public class macroInterfaz extends Application {
 
         TranslateTransition subir = new TranslateTransition(Duration.millis(250), tarjeta);
         subir.setFromY(600);
-        subir.setToY(478);
+        subir.setToY(491);
         subir.play();
 
     }
