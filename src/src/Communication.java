@@ -28,7 +28,7 @@ public class Communication {
         // Limpiar buffers iniciales
         clearBuffers();
 
-        System.out.println("✓ Puerto COM" + commPort + " (" + sp.getDescriptivePortName() + ") abierto");
+        System.out.println("Puerto COM" + commPort + " (" + sp.getDescriptivePortName() + ") abierto");
 
         // Iniciar hilo para leer respuestas del ESP32
         iniciarLectorSerial();
@@ -47,7 +47,7 @@ public class Communication {
 
                         // Mostrar respuestas del ESP32 en consola
                         if (!respuesta.trim().isEmpty()) {
-                            System.out.println("📥 ESP32: " + respuesta.trim());
+                            System.out.println("====ESP32: " + respuesta.trim());
 
                             if (listener != null) {
                                 listener.datoSeriales(respuesta.trim());
@@ -186,9 +186,9 @@ public class Communication {
             sp.flushIOBuffers();
 
             if (totalSent == data.length) {
-                System.out.println("✓ Imagen enviada completa");
+                System.out.println("Imagen enviada completa");
             } else {
-                System.err.println("✗ Solo " + totalSent + "/" + data.length + " bytes");
+                System.err.println("Solo " + totalSent + "/" + data.length + " bytes");
             }
 
             Thread.sleep(300);  // Esperar a que ESP32 procese
@@ -204,23 +204,21 @@ public class Communication {
 
     public void sendImage(byte[] imageData) {
         if (imageData == null || imageData.length != 900) {
-            System.err.println("❌ Error: Se necesitan exactamente 900 bytes");
+            System.err.println("Error: Se necesitan exactamente 900 bytes");
             return;
         }
 
         System.out.println("\n=== ENVIANDO IMAGEN A ESP32 (Optimizado) ===");
 
         try {
-            // 1. Preparar buffers
+            //Preparar buffers
             clearBuffers();
             Thread.sleep(150);
 
-            // 2. Enviar encabezado
             sp.writeBytes("IMG:".getBytes("UTF-8"), 4);
             Thread.sleep(50);
 
-            // 3. Enviar datos en formato hexadecimal en chunks
-            int chunkSize = 20; // 128 bytes de imagen = ~640 caracteres hex
+            int chunkSize = 32;
             int totalBytes = 0;
 
             for (int i = 0; i < imageData.length; i += chunkSize) {
@@ -238,35 +236,32 @@ public class Communication {
                 sp.writeBytes(chunkBytes, chunkBytes.length);
                 totalBytes += (end - i);
 
-                // Mostrar progreso
                 System.out.printf("  Enviado: %d/900 bytes (%.1f%%)\n",
                         totalBytes, (totalBytes * 100.0 / 900));
 
-                Thread.sleep(10); // Delay mínimo entre chunks
+                Thread.sleep(10);
             }
 
-            // 4. Enviar final de línea
             sp.writeBytes("\n".getBytes("UTF-8"), 1);
             sp.flushIOBuffers();
 
             System.out.println("✓ Imagen enviada en formato hexadecimal");
 
-            // 5. Esperar confirmación
             Thread.sleep(500);
             if (sp.bytesAvailable() > 0) {
                 byte[] respuesta = new byte[sp.bytesAvailable()];
                 sp.readBytes(respuesta, respuesta.length);
-                System.out.println("📥 ESP32: " + new String(respuesta).trim());
+                System.out.println("ESP32: " + new String(respuesta).trim());
             }
 
         } catch (Exception e) {
-            System.err.println("❌ Error en sendImage:");
+            System.err.println("Error en sendImage:");
             e.printStackTrace();
         }
     }
 
     public void close() {
-        System.out.println("🔻 Cerrando comunicación SERIAL de forma segura...");
+        System.out.println("Cerrando comunicación SERIAL de forma segura");
 
         try {
             // 1. Detener hilo lector
@@ -277,17 +272,17 @@ public class Communication {
                 try { lectorThread.join(300); } catch (InterruptedException ignored) {}
             }
 
-            // 2. Vaciar buffers
+            //Vaciar buffers
             if (sp != null) {
                 try { sp.flushIOBuffers(); } catch (Exception ignored) {}
 
-                // 3. CERRAR PUERTO LIMPIO (ESTO ES LO QUE EVITA EL FREEZE)
+                //Cerra puerto
                 if (sp.isOpen()) {
                     sp.closePort();
                 }
             }
 
-            System.out.println("✅ Puerto cerrado sin congelar el ESP32");
+            System.out.println("Puerto cerrado sin congelar el ESP32");
 
         } catch (Exception e) {
             e.printStackTrace();

@@ -6,10 +6,8 @@ import javafx.geometry.Pos;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.Region;
-import javafx.scene.layout.StackPane;
+import javafx.scene.layout.*;
 import javafx.scene.control.TextField;
-import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.FileChooser;
@@ -18,19 +16,20 @@ import javafx.animation.ScaleTransition;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.paint.Color;
 import javafx.scene.image.Image;
 
-import javax.crypto.Mac;
+
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URI;
-import java.util.HashMap;
+import java.util.*;
 import java.io.IOException;
+import java.awt.event.KeyEvent;
+import java.util.List;
 
 public class macroInterfaz extends Application {
     private boolean menuAbierto = false;
@@ -38,11 +37,11 @@ public class macroInterfaz extends Application {
     private HashMap<String, MacroBoton> botones = new HashMap<>();
     private MacroBoton botonSeleccionado = null;
     private static final String CONFIG_FILE = "C:\\Users\\sgsg_\\IdeaProjects\\stremDeck\\macro_config.dat";
-    private ComboBox<String> menuMacros;
     private ImageView previewImagen;
     private Label labelBotonSeleccionado;
     private Image image;
     private int modoLED;
+    private Map<String, Integer> keyMap = new HashMap<>();
 
     //Atributo para las rutas que se estaran guardando
     private String ruta;
@@ -51,6 +50,7 @@ public class macroInterfaz extends Application {
     public void start(Stage primaryStage) {
 
         modoLED = 1;
+        inicializarTeclas();
 
         // StackPane principal para centrar todo
         StackPane root = new StackPane();
@@ -74,8 +74,8 @@ public class macroInterfaz extends Application {
         carcasa.setArcHeight(20);
 
         //INformacion macro
-        VBox tarjetaInfo = new VBox(10);
-        tarjetaInfo.setPrefSize(320, 130);
+        VBox tarjetaInfo = new VBox(5);
+        tarjetaInfo.setPrefSize(483, 420);
         tarjetaInfo.setStyle(
                 "-fx-background-color: #3a3a3a;" +
                         "-fx-background-radius: 25;" +
@@ -83,6 +83,9 @@ public class macroInterfaz extends Application {
                         "-fx-border-radius: 25;" +
                         "-fx-border-color: #7d5ba6;"
         );
+        tarjetaInfo.setMaxWidth(483);
+        tarjetaInfo.setMinWidth(320);
+
 
         Label infoTitulo = new Label("Macro");
         infoTitulo.setTextFill(Color.WHITE);
@@ -99,7 +102,7 @@ public class macroInterfaz extends Application {
         tarjetaInfo.setTranslateY(600);
 
         // La agregamos como overlay SIN afectar nada
-        StackPane.setAlignment(tarjetaInfo, Pos.BOTTOM_CENTER);
+        StackPane.setAlignment(tarjetaInfo, Pos.BOTTOM_LEFT);
         root.getChildren().add(tarjetaInfo);
 
 
@@ -128,7 +131,7 @@ public class macroInterfaz extends Application {
                 "-fx-padding: 5;"
         );
         cerrarMenu.setOnAction(e -> {
-            cerrarMenu(menu, keyboardContainer);
+            cerrarMenu(menu, keyboardContainer, tarjetaInfo);
         });
 
         seccionCerrarMenu.getChildren().add(cerrarMenu);
@@ -154,7 +157,6 @@ public class macroInterfaz extends Application {
         previewImagen.setPreserveRatio(true);
         previewImagen.setVisible(false);
 
-        // REEMPLAZA COMPLETAMENTE el setOnAction del botón cargarImagenBtn
 
         cargarImagenBtn.setOnAction(e -> {
             // VALIDAR que haya un botón seleccionado
@@ -177,7 +179,7 @@ public class macroInterfaz extends Application {
                 try {
                     String ruta = archivo.getAbsolutePath();
 
-                    System.out.println("📸 Cargando imagen...");
+                    System.out.println("Cargando imagen...");
                     System.out.println("   Archivo: " + archivo.getName());
                     System.out.println("   Ruta: " + ruta);
 
@@ -191,10 +193,8 @@ public class macroInterfaz extends Application {
                         return;
                     }
 
-                    // Actualizar la imagen global
                     image = nuevaImagen;
 
-                    // Guardar en el botón seleccionado
                     botonSeleccionado.setIcono(image);
                     botonSeleccionado.setRutaIcono(ruta);
 
@@ -280,23 +280,19 @@ public class macroInterfaz extends Application {
                         "-fx-padding: 10;"
         );
 
-        btnNuevaMacro.setOnAction(e -> abrirVentanaNuevaMacro());
+        btnNuevaMacro.setOnAction(e -> {
+            try {
+                abrirVentanaNuevaMacro();
+            } catch (AWTException ex) {
+                throw new RuntimeException(ex);
+            }
+        });
 
         seccionSuperior.getChildren().add(btnNuevaMacro);
         seccionSuperior.getChildren().addAll(cargarImagenBtn, previewImagen, combo);
 
         VBox seccionMedia = new VBox(15);
         seccionMedia.setAlignment(Pos.TOP_CENTER);
-
-        Label mensajeMacros = new Label("Macros");
-        mensajeMacros.setStyle("-fx-text-fill: #F5F5DC; -fx-font-size: 16px; -fx-font-weight: bold;");
-
-        //opciones de macros, poner los que son
-        menuMacros = new ComboBox<>();
-        menuMacros.getItems().addAll("", "Macro 1", "Macro 2", "Macro 3", "Macro 4");
-        menuMacros.setValue("");
-
-        seccionMedia.getChildren().addAll(mensajeMacros, menuMacros);
 
         VBox seccionInferior = new VBox();
         seccionInferior.setAlignment(Pos.BOTTOM_CENTER);
@@ -331,7 +327,6 @@ public class macroInterfaz extends Application {
             botonSeleccionado.setRuta("");
 
             // Limpiar interfaz
-            menuMacros.setValue("");
             previewImagen.setImage(null);
             previewImagen.setVisible(false);
 
@@ -360,9 +355,6 @@ public class macroInterfaz extends Application {
                         "-fx-padding: 10;"
         );
 
-        // REEMPLAZA SOLO ESTA SECCIÓN EN TU CÓDIGO
-// Busca donde está el botón "configurar" y reemplaza su setOnAction por esto:
-
         configurar.setOnAction(e -> {
             // VALIDACIONES PRIMERO
             if (esp32 == null) {
@@ -386,8 +378,7 @@ public class macroInterfaz extends Application {
                     botonSeleccionado.getCol() + "]");
             System.out.println("════════════════════════════════════");
 
-            // 1. Configurar macro y label
-            String macroSeleccionada = menuMacros.getValue();
+            String macroSeleccionada = botonSeleccionado.getMacro();
             if (macroSeleccionada == null || macroSeleccionada.isEmpty()) {
                 System.out.println("Advertencia: No se seleccionó ningún macro");
             } else {
@@ -401,7 +392,6 @@ public class macroInterfaz extends Application {
             }
 
             if (image != null) {
-                // 2. Convertir imagen a bytes
                 System.out.println("\nProcesando imagen...");
                 byte[] imageBytes = convertirAArduinoBytes(image);
 
@@ -413,7 +403,6 @@ public class macroInterfaz extends Application {
 
                 System.out.println("✓ Imagen convertida correctamente (900 bytes)");
 
-                // 3. Enviar imagen al ESP32
                 System.out.println("\nEnviando imagen al ESP32...");
 
                 try {
@@ -427,14 +416,13 @@ public class macroInterfaz extends Application {
                 }
             }
 
-            // 4. Guardar configuración
             System.out.println("\nGuardando configuración...");
             guardarConfiguracion();
             actualizarLabelBoton(botonSeleccionado);
 
-            System.out.println("════════════════════════════════════");
+            System.out.println("====================================");
             System.out.println("CONFIGURACIÓN COMPLETADA");
-            System.out.println("════════════════════════════════════\n");
+            System.out.println("====================================\n");
         });
 
 
@@ -445,13 +433,13 @@ public class macroInterfaz extends Application {
         seccionInferior.getChildren().addAll(configurar, espaciadorExtra, borrar);
 
         javafx.scene.layout.Region espaciador1 = new javafx.scene.layout.Region();
-        espaciador1.setPrefHeight(5); // Espacio entre sección cerrar menu y superior
+        espaciador1.setPrefHeight(5);
 
         javafx.scene.layout.Region espaciador2 = new javafx.scene.layout.Region();
-        espaciador2.setPrefHeight(30); // Espacio entre sección media e inferior
+        espaciador2.setPrefHeight(30);
 
         javafx.scene.layout.Region espaciador3 = new javafx.scene.layout.Region();
-        espaciador2.setPrefHeight(30); // Espacio entre sección media e inferior
+        espaciador2.setPrefHeight(30);
 
         menu.getChildren().addAll(seccionCerrarMenu, espaciador1, seccionSuperior, espaciador2, seccionMedia, espaciador3, seccionInferior);
 
@@ -588,7 +576,7 @@ public class macroInterfaz extends Application {
             testImage[byteIndex2] &= ~(1 << bitIndex2);
         }
 
-        System.out.println("✓ Imagen de prueba: fondo negro + marco blanco + X blanca");
+        System.out.println("Imagen de prueba: fondo negro + marco blanco + X blanca");
         return testImage;
     }
 
@@ -598,13 +586,14 @@ public class macroInterfaz extends Application {
         tt.setToX(300);  //entra a la pantalla
 
         TranslateTransition keys = new TranslateTransition(Duration.millis(300), teclado);
-        keys.setToX(-100); //se mueve el teclado
+        keys.setToX(-100);
 
         tt.play();
         keys.play();
     }
 
-    private void cerrarMenu(VBox menu, StackPane teclado) {
+    private void cerrarMenu(VBox menu, StackPane teclado, VBox tarjeta) {
+
         StackPane menuContainer = (StackPane) menu.getParent();
         TranslateTransition tt = new TranslateTransition(Duration.millis(300), menuContainer);
         tt.setToX(500); //se esconde fuera
@@ -822,10 +811,8 @@ public class macroInterfaz extends Application {
         // Actualizar el ComboBox con el macro guardado
         String macro = macroB.getMacro();
         if (macro != null && !macro.isEmpty()) {
-            menuMacros.setValue(macro);
             System.out.println("  Macro: " + macro);
         } else {
-            menuMacros.setValue("");
             System.out.println("  Sin macro configurado");
         }
 
@@ -861,10 +848,10 @@ public class macroInterfaz extends Application {
         // Actualizar texto del botón
         if (label != null && !label.isEmpty()) {
             botonVisual.setText(label);
-            System.out.println("✓ Label actualizado: " + label);
+            System.out.println("Label actualizado: " + label);
         } else {
             botonVisual.setText("");
-            System.out.println("✓ Label limpiado");
+            System.out.println("Label limpiado");
         }
 
         // Actualizar preview de imagen
@@ -875,14 +862,6 @@ public class macroInterfaz extends Application {
         } else {
             previewImagen.setImage(null);
             previewImagen.setVisible(false);
-        }
-
-        // Actualizar ComboBox
-        String macro = macroBoton.getMacro();
-        if (macro != null && !macro.isEmpty()) {
-            menuMacros.setValue(macro);
-        } else {
-            menuMacros.setValue("");
         }
 
         // Actualizar la referencia global
@@ -914,7 +893,45 @@ public class macroInterfaz extends Application {
                 return;
             }
 
+            if (ruta.startsWith("TXT:")) {
+                String contenido = ruta.substring(4);
+                escribirTexto(contenido);
+                return;
+            }
+
+            if (ruta.startsWith("CTRL") || ruta.startsWith("SHIFT") || ruta.startsWith("ALT") || ruta.startsWith("WIN")
+                    || ruta.startsWith("ENTER") || ruta.startsWith("TAB") || ruta.startsWith("ESC") ||
+                    ruta.startsWith("BACKSPACE") || ruta.startsWith("SPACE")) {
+
+                Robot robot = new Robot();
+                String[] teclas = ruta.toUpperCase().split("\\+");
+
+                //Presionado de tecla
+                for (String tecla : teclas) {
+                    Integer keyCode = keyMap.get(tecla);
+                    if (keyCode != null) {
+                        robot.keyPress(keyCode);
+                    } else {
+                        System.out.println("Tecla no reconocida");
+                    }
+                }
+
+                robot.delay(50);
+
+                //Aqui se suelta la tecla
+                for (int i = teclas.length - 1; i >= 0; i--) {
+                    Integer keyCode = keyMap.get(teclas[i]);
+                    if (keyCode != null) {
+                        robot.keyRelease(keyCode);
+                    } else {
+                        System.out.println("Tecla no reconocida");
+                    }
+                }
+                return;
+            }
+
             String comando = "cmd /c start \"\" \"" + ruta + "\"";
+
             Runtime.getRuntime().exec(comando);
 
         } catch (Exception exception) {
@@ -922,7 +939,7 @@ public class macroInterfaz extends Application {
         }
     }
 
-    private void abrirVentanaNuevaMacro() {
+    private void abrirVentanaNuevaMacro() throws AWTException {
         if (botonSeleccionado == null) {
             System.err.println("Selecciona un botón primero");
             return;
@@ -948,7 +965,7 @@ public class macroInterfaz extends Application {
         );
 
         ComboBox<String> tipoMacro = new ComboBox<>();
-        tipoMacro.getItems().addAll("Pagina web", "Ejecutable", "Texto", "Sonido", "LEDs");
+        tipoMacro.getItems().addAll("Pagina web", "Ejecutable", "Texto", "LEDs", "Comando");
         tipoMacro.setOnAction(escogido -> {
 
             Label nombreLabel = new Label("Ingresa el nombre del macro");
@@ -1043,11 +1060,32 @@ public class macroInterfaz extends Application {
                     root.getChildren().clear();
                     root.getChildren().addAll(titulo, tipoMacro, nombreLabel, capNombre, btnGuardar);
 
-                    break;
-                case "Sonido":
-                    root.getChildren().clear();
-                    root.getChildren().addAll(titulo, tipoMacro, nombreLabel, capNombre, btnGuardar);
+                    Label texto = new Label("Ingrese el texto");
+                    texto.setTextFill(Color.WHITE);
+                    texto.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+                    root.getChildren().add(2, texto);
 
+                    TextField textoLugar = new TextField();
+                    textoLugar.setPrefWidth(150);
+                    root.getChildren().add(3, textoLugar);
+
+                    btnGuardar.setOnAction(evento -> {
+                        String contenido = "TXT:" + textoLugar.getText();
+
+                        if (botonSeleccionado != null) {
+                            botonSeleccionado.setMacro(capNombre.getText());
+                            botonSeleccionado.setRuta(contenido);
+                        }
+
+                        new Thread(() -> {
+                            try {
+                                Thread.sleep(1000);
+                                javafx.application.Platform.runLater(() -> stage.close());
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }).start();
+                    });
                     break;
                 case "LEDs":
                     root.getChildren().clear();
@@ -1076,32 +1114,58 @@ public class macroInterfaz extends Application {
                         }).start();
                     });
                     break;
-//                case "Intensidad LEDs":
-//                    root.getChildren().clear();
-//                    root.getChildren().addAll(titulo, tipoMacro, nombreLabel, capNombre, btnGuardar);
-//
-//                    btnGuardar.setOnAction(evento -> {
-//                        Label configurado = new Label("Configurado");
-//
-//                        configurado.setTextFill(Color.WHITE);
-//                        configurado.setFont(Font.font("Arial", FontWeight.BOLD, 14));
-//                        root.getChildren().add(2, configurado);
-//
-//                        if (botonSeleccionado != null) {
-//                            botonSeleccionado.setRuta("INT");
-//                            botonSeleccionado.setMacro(capNombre.getText());
-//                        }
-//
-//                        new Thread(() -> {
-//                            try {
-//                                Thread.sleep(1000);
-//                                javafx.application.Platform.runLater(() -> stage.close());
-//                            } catch (InterruptedException e) {
-//                                e.printStackTrace();
-//                            }
-//                        }).start();
-//                    });
-//                    break;
+                case "Comando":
+                    root.getChildren().clear();
+                    root.getChildren().addAll(titulo, tipoMacro, nombreLabel, capNombre, btnGuardar);
+                    ArrayList<String> hotKeys = new ArrayList<>(List.of(new String[]{"CTRL", "SHIFT", "ALT", "WIN", "ENTER", "TAB", "ESC", "" +
+                            "BACKSPACE", "SPACE"}));
+
+                    ArrayList<Character> teclas = new ArrayList<>();
+                    for (char c = 'A'; c <= 'Z'; c++) {
+                        teclas.add(c);
+                    }
+                    for (char c = '0'; c <= '9'; c++) {
+                        teclas.add(c);
+                    }
+
+                    ArrayList<String> letrasYnumeros = new ArrayList<>();
+
+                    //HotKeys
+                    ComboBox<String> comandos = new ComboBox<>();
+                    comandos.getItems().addAll(hotKeys);
+
+                    //Teclas
+                    ComboBox<Character> comandoLetras = new ComboBox<>();
+                    comandoLetras.getItems().addAll(teclas);
+
+                    HBox filaCombos = new HBox(10);
+                    filaCombos.setAlignment(Pos.CENTER);
+
+                    filaCombos.getChildren().addAll(comandos, comandoLetras);
+                    root.getChildren().add(2, filaCombos);
+
+
+                    btnGuardar.setOnAction(evento -> {
+                        String comandoS = comandos.getSelectionModel().getSelectedItem();
+                        Character tecla = comandoLetras.getSelectionModel().getSelectedItem();
+
+                        if (botonSeleccionado != null) {
+                            String comandoSeleccionado = comandoS + "+" + tecla;
+
+                            botonSeleccionado.setRuta(comandoSeleccionado);
+                            botonSeleccionado.setMacro(capNombre.getText());
+                        }
+
+                        new Thread(() -> {
+                            try {
+                                Thread.sleep(1000);
+                                javafx.application.Platform.runLater(() -> stage.close());
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }).start();
+                    });
+                    break;
 
             }
         });
@@ -1110,7 +1174,7 @@ public class macroInterfaz extends Application {
 
         Scene scene = new Scene(root, 500, 400);
         stage.setScene(scene);
-        stage.initModality(javafx.stage.Modality.APPLICATION_MODAL); // BLOQUEA LA PRINCIPAL
+        stage.initModality(javafx.stage.Modality.APPLICATION_MODAL); //BLOQUEA LA PRINCIPAL
         stage.setResizable(false);
         stage.showAndWait();
     }
@@ -1125,10 +1189,58 @@ public class macroInterfaz extends Application {
 
         texto.setText(info);
 
-        TranslateTransition subir = new TranslateTransition(Duration.millis(250), tarjeta);
+        TranslateTransition subir = new TranslateTransition(Duration.millis(300), tarjeta);
         subir.setFromY(600);
         subir.setToY(491);
         subir.play();
 
     }
+
+    /**
+     * Funcion para asignar dinamicamente comandos
+     */
+    private void inicializarTeclas() {
+        keyMap.put("CTRL", KeyEvent.VK_CONTROL);
+        keyMap.put("SHIFT", KeyEvent.VK_SHIFT);
+        keyMap.put("ALT", KeyEvent.VK_ALT);
+        keyMap.put("WIN", KeyEvent.VK_WINDOWS);
+        keyMap.put("ENTER", KeyEvent.VK_ENTER);
+        keyMap.put("TAB", KeyEvent.VK_TAB);
+        keyMap.put("ESC", KeyEvent.VK_ESCAPE);
+        keyMap.put("BACKSPACE", KeyEvent.VK_BACK_SPACE);
+        keyMap.put("SPACE", KeyEvent.VK_SPACE);
+
+        for (char c = 'A'; c <= 'Z'; ++c) {
+            keyMap.put(String.valueOf(c), KeyEvent.getExtendedKeyCodeForChar(c));
+        }
+
+        for (char c = '0'; c <= '9'; c++) {
+            keyMap.put(String.valueOf(c), KeyEvent.getExtendedKeyCodeForChar(c));
+        }
+    }
+
+    private void escribirTexto(String texto) {
+        try {
+            Robot robot = new Robot();
+
+            for (char c : texto.toCharArray()) {
+                int keyCode = KeyEvent.getExtendedKeyCodeForChar(c);
+
+                if (KeyEvent.CHAR_UNDEFINED == keyCode) continue;
+
+                robot.keyPress(keyCode);
+                robot.keyRelease(keyCode);
+
+                if (Character.isUpperCase(c)) {
+                    robot.keyRelease(KeyEvent.VK_SHIFT);
+                }
+
+                Thread.sleep(15);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 }
