@@ -9,6 +9,10 @@ public class Communication {
     private Thread lectorThread = null;
 
 
+    /**
+     * Constructor para comboBox donde se obtiene el com mediante el indice del comboBox
+     * @param commPort
+     */
     public Communication(int commPort) {
         this.commPort = commPort;
         sp = SerialPort.getCommPorts()[this.commPort];
@@ -20,7 +24,7 @@ public class Communication {
         }
 
         try {
-            Thread.sleep(2000);  // Más tiempo para init
+            Thread.sleep(2000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -34,7 +38,35 @@ public class Communication {
         iniciarLectorSerial();
     }
 
-    // NUEVO: Hilo para leer constantemente del ESP32
+    /**
+     * Constructor donde se tiene directamente el puerto
+     * @param commPort
+     */
+    public Communication(String commPort) {
+        this.commPort = Integer.parseInt(commPort.replaceAll("\\D", ""));
+        sp = SerialPort.getCommPort(commPort);
+        sp.setBaudRate(115200);
+        sp.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 50, 0);
+
+        if (!sp.openPort()) {
+            throw new RuntimeException("No se pudo abrir el puerto COM" + commPort);
+        }
+
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        // Limpiar buffers iniciales
+        clearBuffers();
+
+        System.out.println("Puerto COM" + commPort + " (" + sp.getDescriptivePortName() + ") abierto");
+
+        //Iniciar hilo para leer respuestas del ESP32
+        iniciarLectorSerial();
+    }
+
     private void iniciarLectorSerial() {
         running = true;
         Thread lector = new Thread(() -> {
@@ -60,7 +92,7 @@ public class Communication {
                 } catch (InterruptedException e) {
                     break;
                 } catch (Exception e) {
-                    // mostrar y seguir intentando (no matar hilo)
+                    //mostrar y seguir intentando (no matar hilo)
                     e.printStackTrace();
                     try { Thread.sleep(200); } catch (InterruptedException ex) { break; }
                 }
@@ -305,5 +337,13 @@ public class Communication {
         sp.setBaudRate(115200);
         sp.setComPortTimeouts(SerialPort.TIMEOUT_WRITE_BLOCKING, 0, 0);
         sp.openPort();
+    }
+
+    public SerialPort getSp() {
+        return sp;
+    }
+
+    public void setSp(SerialPort sp) {
+        this.sp = sp;
     }
 }

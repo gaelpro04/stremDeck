@@ -1,4 +1,4 @@
-import com.fazecast.jSerialComm.SerialPort;
+import com.fazecast.jSerialComm.*;
 import javafx.animation.TranslateTransition;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
@@ -42,21 +42,23 @@ public class macroInterfaz extends Application {
     private Image image;
     private int modoLED;
     private Map<String, Integer> keyMap = new HashMap<>();
+    private volatile boolean running = true;
+    private volatile boolean stateBefore = true;
 
     //Atributo para las rutas que se estaran guardando
     private String ruta;
 
     @Override
-    public void start(Stage primaryStage) {
+    public void start(Stage primaryStage) throws InterruptedException {
 
         modoLED = 1;
         inicializarTeclas();
 
-        // StackPane principal para centrar todo
+        //StackPane principal para centrar todo
         StackPane root = new StackPane();
         root.setStyle("-fx-background-color: #1e1e1e;");
 
-        // StackPane para la carcasa y el teclado
+        //StackPane para la carcasa y el teclado
         StackPane keyboardContainer = new StackPane();
         Label labelTitulo = new Label("Configuracion de macros");
         labelTitulo.setFont(Font.font("Arial", FontWeight.NORMAL, 25));
@@ -65,7 +67,7 @@ public class macroInterfaz extends Application {
                 "-fx-font-weight: bold;" +
                 "-fx-background-radius: 20;");
 
-        // Carcasa (rectángulo que representa la caja del teclado)
+        //Carcasa (rectangulo que representa la caja del teclado)
         Rectangle carcasa = new Rectangle(360, 360);
         carcasa.setFill(Color.rgb(40, 40, 40));
         carcasa.setStroke(Color.rgb(60, 60, 60));
@@ -98,15 +100,14 @@ public class macroInterfaz extends Application {
 
         tarjetaInfo.getChildren().addAll(infoTitulo, infoContenido);
 
-        // Posición inicial OCULTA (abajo)
+        //Posición inicial oculta (abajo)
         tarjetaInfo.setTranslateY(600);
 
-        // La agregamos como overlay SIN afectar nada
         StackPane.setAlignment(tarjetaInfo, Pos.BOTTOM_LEFT);
         root.getChildren().add(tarjetaInfo);
 
 
-        // GridPane para los botones
+        //GridPane para los botones
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
@@ -159,7 +160,6 @@ public class macroInterfaz extends Application {
 
 
         cargarImagenBtn.setOnAction(e -> {
-            // VALIDAR que haya un botón seleccionado
             if (botonSeleccionado == null) {
                 System.err.println("Error: Debes seleccionar un botón primero");
                 return;
@@ -186,7 +186,6 @@ public class macroInterfaz extends Application {
                     // Cargar la imagen
                     Image nuevaImagen = new Image(archivo.toURI().toString());
 
-                    // CRÍTICO: Verificar que la imagen se cargó correctamente
                     if (nuevaImagen.isError()) {
                         System.err.println("Error al cargar la imagen");
                         System.err.println("La imagen puede estar corrupta o en formato no soportado");
@@ -218,58 +217,10 @@ public class macroInterfaz extends Application {
             }
         });
 
-        ComboBox<String> combo = new ComboBox<>();
-        SerialPort[] ports = SerialPort.getCommPorts();
-
-        for (SerialPort port : ports) {
-            combo.getItems().add(port.getSystemPortName());
-        }
-
-        combo.setOnAction(e -> {
-            int index = combo.getSelectionModel().getSelectedIndex();
-            esp32 = new Communication(index);
-
-            esp32.setButtonPressListener((fila, col) -> {
-                System.out.println("   BOTÓN FÍSICO PRESIONADO: [" + fila + "," + col + "]");
-
-                String key = fila + "," + col;
-                MacroBoton btn = botones.get(key);
-
-                if (btn != null) {
-                    String ruta = btn.getRuta();
-                    String macro = btn.getMacro();
-                    Image imagen = btn.getIcono();
-
-                    System.out.println("Configuración del botón:");
-                    System.out.println("   Macro: " + (macro != null && !macro.isEmpty() ? macro : "Sin macro"));
-                    System.out.println("   Ruta: " + (ruta != null && !ruta.isEmpty() ? ruta : "Sin ruta"));
-                    System.out.println("   Imagen: " + (imagen != null ? "Sí" : "No"));
-
-                    if (ruta != null && !ruta.isEmpty()) {
-                        System.out.println("\nEjecutando macro...");
-                        ejecutarMacro(ruta);
-                        System.out.println("Macro ejecutado");
-                    } else {
-                        System.out.println("\nEste botón no tiene macro configurado");
-                    }
-
-                    if (imagen != null && esp32 != null) {
-                        System.out.println("\nMostrando imagen en display...");
-                        byte[] imageBytes = convertirAArduinoBytes(imagen);
-                        if (imageBytes != null && imageBytes.length == 900) {
-                            try {
-                                esp32.sendImage(imageBytes);
-                                System.out.println("Imagen mostrada en display");
-                            } catch (Exception ex) {
-                                System.err.println("Error al mostrar imagen: " + ex.getMessage());
-                            }
-                        }
-                    }
-                } else {
-                    System.out.println("Botón no encontrado en la configuración");
-                }
-            });
-        });
+        //Conexion y lectura macros inicial
+        conectar();
+        Thread.sleep(3000);
+        extracted();
 
         Button btnNuevaMacro = new Button("Nueva Macro");
         btnNuevaMacro.setPrefWidth(160);
@@ -289,7 +240,7 @@ public class macroInterfaz extends Application {
         });
 
         seccionSuperior.getChildren().add(btnNuevaMacro);
-        seccionSuperior.getChildren().addAll(cargarImagenBtn, previewImagen, combo);
+        seccionSuperior.getChildren().addAll(cargarImagenBtn, previewImagen);
 
         VBox seccionMedia = new VBox(15);
         seccionMedia.setAlignment(Pos.TOP_CENTER);
@@ -307,8 +258,6 @@ public class macroInterfaz extends Application {
         );
 
         //reiniciamos los valores para borrar todo y lo guardamos
-        // REEMPLAZA el setOnAction del botón borrar
-
         borrar.setOnAction(e -> {
             if (botonSeleccionado == null) {
                 System.err.println("Error: No hay botón seleccionado");
@@ -330,10 +279,9 @@ public class macroInterfaz extends Application {
             previewImagen.setImage(null);
             previewImagen.setVisible(false);
 
-            // CRÍTICO: Limpiar la referencia global
             image = null;
 
-            // Guardar cambios
+            //Guardar cambios
             guardarConfiguracion();
             actualizarLabelBoton(botonSeleccionado);
 
@@ -388,7 +336,7 @@ public class macroInterfaz extends Application {
                 if (ruta != null) {
                     botonSeleccionado.setRuta(ruta);
                 }
-                System.out.println("✓ Macro configurado: " + macroSeleccionada);
+                System.out.println("Macro configurado: " + macroSeleccionada);
             }
 
             if (image != null) {
@@ -498,17 +446,16 @@ public class macroInterfaz extends Application {
                                     "-fx-background-radius: 10;"
                     ));
                     System.out.println("Botón presionado: " + btn.getText());
-                    //System.out.println(botonSeleccionado.getRow() + ", " + botonSeleccionado.getCol());
                 });
 
                 grid.add(btn, j, i);
             }
         }
 
-        // Agregar carcasa y grid al contenedor
+        //Agregar carcasa y grid al contenedor
         keyboardContainer.getChildren().addAll(carcasa, grid);
 
-        // Agregar el contenedor al root
+        //Agregar el contenedor al root
         root.getChildren().addAll(keyboardContainer, menuContainer);
         root.setAlignment(Pos.CENTER);
         root.getChildren().add(labelTitulo);
@@ -523,6 +470,7 @@ public class macroInterfaz extends Application {
         primaryStage.show();
         primaryStage.setOnCloseRequest(event -> {
             System.out.println("\nCerrando aplicación...");
+            running = false;
 
             if (esp32 != null) {
                 esp32.close();
@@ -532,6 +480,56 @@ public class macroInterfaz extends Application {
 
             System.out.println("Aplicación cerrada\n");
         });
+    }
+
+    /**
+     * Metodo que inicia la lectura y escritura de las macros
+     */
+    private void extracted() {
+        try {
+            esp32.setButtonPressListener((fila, col) -> {
+                System.out.println("   BOTÓN FÍSICO PRESIONADO: [" + fila + "," + col + "]");
+
+                String key = fila + "," + col;
+                MacroBoton btn = botones.get(key);
+
+                if (btn != null) {
+                    String ruta = btn.getRuta();
+                    String macro = btn.getMacro();
+                    Image imagen = btn.getIcono();
+
+                    System.out.println("Configuración del botón:");
+                    System.out.println("   Macro: " + (macro != null && !macro.isEmpty() ? macro : "Sin macro"));
+                    System.out.println("   Ruta: " + (ruta != null && !ruta.isEmpty() ? ruta : "Sin ruta"));
+                    System.out.println("   Imagen: " + (imagen != null ? "Sí" : "No"));
+
+                    if (ruta != null && !ruta.isEmpty()) {
+                        System.out.println("\nEjecutando macro...");
+                        ejecutarMacro(ruta);
+                        System.out.println("Macro ejecutado");
+                    } else {
+                        System.out.println("\nEste botón no tiene macro configurado");
+                    }
+
+                    if (imagen != null && esp32 != null) {
+                        System.out.println("\nMostrando imagen en display...");
+                        byte[] imageBytes = convertirAArduinoBytes(imagen);
+                        if (imageBytes != null && imageBytes.length == 900) {
+                            try {
+                                esp32.sendImage(imageBytes);
+                                System.out.println("Imagen mostrada en display");
+                            } catch (Exception ex) {
+                                System.err.println("Error al mostrar imagen: " + ex.getMessage());
+                            }
+                        }
+                    }
+                } else {
+                    System.out.println("Botón no encontrado en la configuración");
+                }
+            });
+        } catch (NullPointerException exception) {
+            System.err.println("ERROR PINCHE PENDEJO");
+        }
     }
 
     private byte[] crearImagenDePrueba() {
@@ -592,7 +590,19 @@ public class macroInterfaz extends Application {
         keys.play();
     }
 
+    /**
+     * Metodo de la interfaz que cierra el menu derecho y la terjeta con la info de la macro
+     * @param menu
+     * @param teclado
+     * @param tarjeta
+     */
     private void cerrarMenu(VBox menu, StackPane teclado, VBox tarjeta) {
+
+        //Para la info del macro
+        TranslateTransition subir = new TranslateTransition(Duration.millis(300), tarjeta);
+        subir.setFromY(491);
+        subir.setToY(600);
+        subir.play();
 
         StackPane menuContainer = (StackPane) menu.getParent();
         TranslateTransition tt = new TranslateTransition(Duration.millis(300), menuContainer);
@@ -609,7 +619,6 @@ public class macroInterfaz extends Application {
         launch(args);
     }
 
-    // REEMPLAZA el método convertirAArduinoBytes en tu clase
 
     public static byte[] convertirAArduinoBytes(Image img) {
         if (img == null) {
@@ -797,8 +806,6 @@ public class macroInterfaz extends Application {
         }
     }
 
-    // REEMPLAZA estos dos métodos en tu clase
-
     private void actualizarMenuConBoton(MacroBoton macroB) {
         if (macroB == null) {
             System.err.println("actualizarMenuConBoton: botón es null");
@@ -868,7 +875,14 @@ public class macroInterfaz extends Application {
         image = icono;
     }
 
+    /**
+     * Metodo que ejecuta los macros
+     * @param ruta
+     */
     private void ejecutarMacro(String ruta) {
+
+        //Cada macro tiene una etiqueta por lo tanto, identificando la etiqueta se puede saber
+        //que tipo de macro es y por lo tanto se ejecuta
         try {
             if (ruta.startsWith("http://") || ruta.startsWith("https://")) {
                 Desktop.getDesktop().browse(new URI(ruta));
@@ -939,6 +953,10 @@ public class macroInterfaz extends Application {
         }
     }
 
+    /**
+     * Metodo que permite crear nuevos macros
+     * @throws AWTException
+     */
     private void abrirVentanaNuevaMacro() throws AWTException {
         if (botonSeleccionado == null) {
             System.err.println("Selecciona un botón primero");
@@ -1174,11 +1192,18 @@ public class macroInterfaz extends Application {
 
         Scene scene = new Scene(root, 500, 400);
         stage.setScene(scene);
-        stage.initModality(javafx.stage.Modality.APPLICATION_MODAL); //BLOQUEA LA PRINCIPAL
+        stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
         stage.setResizable(false);
         stage.showAndWait();
     }
 
+    /**
+     * Metodo para mostrar la informacion de cada macro al momento de ser seleccionada
+     * dentro de la interfaz
+     * @param tarjeta
+     * @param texto
+     * @param macro
+     */
     private void mostrarInfoMacro(VBox tarjeta, Label texto, MacroBoton macro) {
         if (macro == null) return;
 
@@ -1219,6 +1244,10 @@ public class macroInterfaz extends Application {
         }
     }
 
+    /**
+     * Metodo que permite escribir texto en pantalla del macro seleccionado
+     * @param texto
+     */
     private void escribirTexto(String texto) {
         try {
             Robot robot = new Robot();
@@ -1242,5 +1271,75 @@ public class macroInterfaz extends Application {
             e.printStackTrace();
         }
     }
+
+    /**
+     * Metodo que lee constantemente lee si se abrio o se cerro el puerto para volver
+     * a conectarlo
+     */
+    private void conectar() {
+        String portESP = "COM21";
+
+        Thread t = new Thread(() -> {
+            while (running) {
+
+
+
+                //Si no hay objeto de comunicacion quiere decir que no esta conectado el puerto
+                if (esp32 == null || esp32.getSp() == null || !esp32.getSp().isOpen()) {
+                    System.out.println("Intentando abrir COM21...");
+
+                    try {
+                        esp32 = new Communication(portESP);
+
+                        //Tiene incorporado una mini maquina de estados de un solo estado donde
+                        //al momento que se conecta por primera vez cambia el estado anterior a false
+                        //queriendo decir que ya es necesario desde un inicio iniciar la escritura de macros
+                        if (esp32.getSp().isOpen()) {
+                            System.out.println("COM21 CONECTADO");
+                            stateBefore = false;
+                        } else {
+                            System.out.println("Falló al abrir COM21.");
+                        }
+
+                        //Inicio de la escritura de macros
+                        if (!stateBefore) {
+                            extracted();
+                        }
+                    } catch (RuntimeException e) {
+                        System.out.println("No hay puerto conectado");
+                    }
+
+
+                }
+
+                if (esp32 != null && esp32.getSp().isOpen()) {
+                    if (!estadoESP32(esp32.getSp())) {
+                        System.out.println("ESP32 se desconectó.");
+                        esp32.close();
+                        esp32 = null;
+                    }
+                }
+            }
+
+            //Tiempo para que conecte el COM
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {}
+
+        });
+        t.setDaemon(true);
+        t.start();
+    }
+
+    /**
+     * Metodo que permite verificar si el micro esta conectado
+     * @param puerto
+     * @return
+     */
+    private boolean estadoESP32(SerialPort puerto) {
+        return puerto.bytesAvailable() != -1;
+    }
+
+
 
 }
